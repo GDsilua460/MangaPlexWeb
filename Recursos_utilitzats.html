@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta name="Recursos" content="Recursos utilitzats">
+    <meta name="autor1" content="Guillem Didier">
+    <title>MangaPlex</title>
+    <link href="recursos_estil.css" rel="stylesheet" type="text/css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" >
+</head>
+
+
+<body>
+    <header class="headerNavbar" id="header">
+        <div class="header-content">
+            <img src="Photos/Icon_real.png" height="130" width="160" alt="MangaPlex Icon">
+            <h1>MangaPlex</h1>
+        </div>
+        <ul class="nav">
+            <li><a href="index.html"><strong>Inici</strong></a></li>
+            <li><a href="Documentació.html"><strong>Documentació</strong></a></li>
+            <li><a href="Explicacio_codi.html"><strong>Explicació codi</strong></a></li>
+            <li><a href="Recursos_utilitzats.html"><strong>Recursos utilitzat</strong></a></li>
+        </ul>
+    </header>
+    <div class="container">
+        <div class="main">
+            <h1>Recursos Utilizados</h1>
+            <p>En el desarrollo del proyecto MangaPlex, se han utilizado los siguientes recursos:</p>
+            <ul>
+                <li><strong>NetBeans:</strong> Un entorno de desarrollo integrado (IDE) utilizado para escribir y depurar el código Java de la aplicación.</li>
+                <li><strong>FXML:</strong> Un lenguaje basado en XML que se utiliza para definir la interfaz de usuario en aplicaciones JavaFX.</li>
+                <li><strong>MySQL:</strong> Un sistema de gestión de bases de datos relacional utilizado para almacenar la información de los usuarios y los mangas.</li>
+                <li><strong>phpMyAdmin:</strong> Una herramienta basada en web para administrar las bases de datos MySQL.</li>
+            </ul>
+        </div>
+        <div class="main">
+            <h1>Explicación del Código</h1>
+            <p>El proyecto MangaPlex incluye varios controladores que gestionan diferentes aspectos de la aplicación. A continuación, se describen algunos de los controladores más importantes:</p>
+            <ul>
+                <li><strong>DBController:</strong> Este controlador maneja todas las operaciones de base de datos, como la conexión, consultas y actualizaciones. Asegura que las interacciones con la base de datos sean eficientes y seguras.</li>
+                <li><strong>HistoryController:</strong> Se encarga de gestionar el historial de lectura de los usuarios, registrando qué capítulos han leído y cuándo, permitiendo una experiencia de usuario personalizada.</li>
+                <li><strong>AuthController:</strong> Gestiona la autenticación de usuarios y administradores, incluyendo el inicio de sesión, registro y la verificación de credenciales.</li>
+                <li><strong>UserHomeController:</strong> Permite la visualización de los mangas por parte de los usuarios.</li>
+                <li><strong>AdminChapterControler:</strong> Controlador que permite realizar acciones CRUD en los capítulos.</li>
+            </ul>
+            <h2>Ejemplo de Código</h2>
+            <p>A continuación, se muestra un ejemplo ficticio de cómo podría ser el código de algunos de estos controladores:</p>
+            <h3>DBController.java</h3>
+            <pre>
+<code>
+public class DBController {
+    private Connection connection;
+
+    public DBController() {
+        try {
+            // Establecer la conexión con la base de datos
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/mangaplex", "root", "");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public ResultSet executeQuery(String query) {
+        try {
+            Statement stmt = connection.createStatement();
+            return stmt.executeQuery(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public int executeUpdate(String query) {
+        try {
+            Statement stmt = connection.createStatement();
+            return stmt.executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public void close() {
+        try {
+            if (connection != null) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+</code>
+            </pre>
+            <h3>HistoryController.java</h3>
+            <pre>
+<code>
+public class HistoryController {
+    private DBController dbController;
+
+    public HistoryController(DBController dbController) {
+        this.dbController = dbController;
+    }
+
+    public void addHistory(String userId, String mangaId, String chapterId) {
+        String query = "INSERT INTO history (user_id, manga_id, chapter_id, read_at) VALUES ('" + userId + "', '" + mangaId + "', '" + chapterId + "', NOW())";
+        dbController.executeUpdate(query);
+    }
+
+    public List<History> getUserHistory(String userId) {
+        List<History> historyList = new ArrayList<>();
+        String query = "SELECT * FROM history WHERE user_id = '" + userId + "' ORDER BY read_at DESC";
+        ResultSet rs = dbController.executeQuery(query);
+
+        try {
+            while (rs.next()) {
+                History history = new History(rs.getString("user_id"), rs.getString("manga_id"), rs.getString("chapter_id"), rs.getTimestamp("read_at"));
+                historyList.add(history);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return historyList;
+    }
+}
+</code>
+            </pre>
+            <h3>AuthController.java</h3>
+            <pre>
+<code>
+public class AuthController {
+    package com.mangaplex.mangaplex.controller;
+
+import com.mangaplex.mangaplex.ResourceClass;
+import com.mangaplex.mangaplex.model.UserEmail;
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
+import javafx.stage.Stage;
+
+import java.io.IOException;
+import java.net.URL;
+import java.util.ResourceBundle;
+
+public class AuthController implements Initializable {
+
+   @FXML
+private Button btnLogin; // Botón de inicio de sesión
+
+@FXML
+private Button btnSignUp; // Botón de registro
+
+@FXML
+private PasswordField pfLoginPassword; // Campo de contraseña para inicio de sesión
+
+@FXML
+private PasswordField pfSignUpPassword1; // Campo de contraseña para registro (primera contraseña)
+
+@FXML
+private PasswordField pfSignUpPassword2; // Campo de contraseña para registro (confirmar contraseña)
+
+@FXML
+private TextField tfLoginEmail; // Campo de texto para correo electrónico de inicio de sesión
+
+@FXML
+private TextField tfSignUpEmail; // Campo de texto para correo electrónico de registro
+
+@FXML
+private TextField tfSignupNickname; // Campo de texto para el apodo en el registro
+
+private Stage stage; // Escenario de la aplicación JavaFX
+
+private UserEmail userEmail = UserEmail.getInstance(); // Instancia singleton para manejar el correo electrónico del usuario
+
+@Override
+public void initialize(URL url, ResourceBundle resourceBundle) {
+    // Establece el texto por defecto para los campos de correo electrónico en inicio de sesión y registro
+    tfLoginEmail.setText("@gmail.com");
+    tfSignUpEmail.setText("@gmail.com");
+
+    // Manejador de eventos para el botón de inicio de sesión
+    btnLogin.setOnAction(e -> {
+
+        // Verifica si los campos de correo electrónico o contraseña están vacíos
+        if(tfLoginEmail.getText().isEmpty() || pfLoginPassword.getText().isEmpty()){
+            Alert dialog = new Alert(Alert.AlertType.ERROR);
+            dialog.setTitle("Error");
+            dialog.setHeaderText("Campo(s) vacio(s)");
+            dialog.setContentText("Hay uno o más campos vacíos en la sección de login");
+            dialog.showAndWait();
+            return;
+        }
+
+        // Verifica si el correo electrónico comienza con "admin"
+        if(tfLoginEmail.getText().startsWith("admin")){
+            // Verifica si el correo electrónico y la contraseña coinciden con las credenciales del administrador
+            if(tfLoginEmail.getText().equals("admin@gmail.com") && pfLoginPassword.getText().equals("admin")){
+                // Si las credenciales coinciden, cambia a la página de inicio del administrador
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Obtiene el escenario desde el control del botón
+                        stage = (Stage) btnLogin.getScene().getWindow();
+                        try {
+                            // Carga el archivo admin_home.fxml
+                            Parent root = FXMLLoader.load(ResourceClass.class.getResource("admin_home.fxml"));
+                            stage.setTitle("Administrator Page");
+                            Scene scene = new Scene(root);
+                            scene.getStylesheets().add(ResourceClass.class.getResource("style.css").toExternalForm());
+                            // Establece la escena y el título del escenario
+                            stage.setScene(scene);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                });
+            } else {
+                // Si las credenciales del administrador no coinciden, muestra un cuadro de diálogo de error
+                Alert dialog = new Alert(Alert.AlertType.ERROR);
+                dialog.setTitle("Error");
+                dialog.setHeaderText("No se ha podido iniciar sesión como administrador");
+                dialog.setContentText("Los detalles que has ofrecido del admin son incorrectos... Esperemos que no seas un atacante, introdúcelos de nuevo");
+                dialog.showAndWait();
+            }
+        } else {
+            // Si el correo electrónico no comienza con "admin", verifica las credenciales del usuario
+            if(DBController.login(tfLoginEmail.getText(), pfLoginPassword.getText())){
+                // Si las credenciales del usuario son correctas, cambia a la página de inicio del usuario
+
+                userEmail.setEmail(tfLoginEmail.getText());
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Obtiene el escenario desde el control del botón
+                        stage = (Stage) btnLogin.getScene().getWindow();
+                        try {
+                            // Carga el archivo user_home.fxml
+                            Parent root = FXMLLoader.load(ResourceClass.class.getResource("user_home.fxml"));
+                            stage.setTitle("User Page");
+                            Scene scene = new Scene(root);
+                            scene.getStylesheets().add(ResourceClass.class.getResource("style.css").toExternalForm());
+                            // Establece la escena y el título del escenario
+                            stage.setScene(scene);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                });
+            } else {
+                // Si las credenciales del usuario son incorrectas, muestra un cuadro de diálogo de error
+                Alert dialog = new Alert(Alert.AlertType.ERROR);
+                dialog.setTitle("Error");
+                dialog.setHeaderText("No se ha podido iniciar sesión");
+                dialog.setContentText("Los detalles del usuario han sido proporcionados incorrectamente.... Por favor, inténtalo de nuevo");
+                dialog.showAndWait();
+            }
+        }
+    });
+
+
+
+       // Manejador de eventos para el botón de registro
+btnSignUp.setOnAction(e -> {
+    // Verifica si alguno de los campos de registro están vacíos
+    if (tfSignUpEmail.getText().isEmpty() || tfSignupNickname.getText().isEmpty()
+            || pfSignUpPassword1.getText().isEmpty() || pfSignUpPassword2.getText().isEmpty()) {
+        // Muestra un cuadro de diálogo de error para los campos vacíos
+        Alert dialog = new Alert(Alert.AlertType.ERROR);
+        dialog.setTitle("Error");
+        dialog.setHeaderText("Campo(s) vacio(s)");
+        dialog.setContentText("Uno o más campos vacíos en la sección de registro");
+        dialog.showAndWait();
+        return;
+    }
+
+    // Verifica si el correo electrónico de registro comienza con "admin"
+    if (tfSignUpEmail.getText().startsWith("admin")) {
+        // Muestra un cuadro de diálogo de error para el admin existente
+        Alert dialog = new Alert(Alert.AlertType.ERROR);
+        dialog.setTitle("Error");
+        dialog.setHeaderText("Admin ya existe");
+        dialog.setContentText("El usuario Admin ya está registrado en la base de datos");
+        dialog.showAndWait();
+        return;
+    }
+
+    // Verifica si el correo electrónico de registro ya existe en la base de datos
+    if (DBController.emailExists(tfSignUpEmail.getText())) {
+        // Muestra un cuadro de diálogo de error para el correo electrónico existente
+        Alert dialog = new Alert(Alert.AlertType.ERROR);
+        dialog.setTitle("Error");
+        dialog.setHeaderText("Email existe");
+        dialog.setContentText("Un usuario con este email ya existe");
+        dialog.showAndWait();
+        return;
+    }
+
+    // Verifica si las dos contraseñas ingresadas coinciden
+    if (!pfSignUpPassword1.getText().equals(pfSignUpPassword2.getText())) {
+        // Muestra un cuadro de diálogo de error para la discrepancia de contraseñas
+        Alert dialog = new Alert(Alert.AlertType.ERROR);
+        dialog.setTitle("Error");
+        dialog.setHeaderText("Contraseña no coincide");
+        dialog.setContentText("Las contraseñas no coinciden....Prueba de nuevo");
+        dialog.showAndWait();
+        return;
+    }
+
+    // Intenta registrar al usuario utilizando la información proporcionada
+    int row = DBController.signUp(tfSignUpEmail.getText(), pfSignUpPassword1.getText(), tfSignupNickname.getText());
+
+    // Verifica si el registro fue exitoso
+    if (row > 0) {
+        userEmail.setEmail(tfSignUpEmail.getText());
+
+        // Si el registro fue exitoso, cambia a la página de inicio del usuario
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                // Obtiene el escenario desde el control del botón
+                stage = (Stage) btnSignUp.getScene().getWindow();
+                try {
+                    // Carga el archivo user_home.fxml
+                    Parent root = FXMLLoader.load(ResourceClass.class.getResource("user_home.fxml"));
+                    stage.setTitle("User Page");
+                    Scene scene = new Scene(root);
+                    scene.getStylesheets().add(ResourceClass.class.getResource("style.css").toExternalForm());
+                    // Establece la escena y el título del escenario
+                    stage.setScene(scene);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
+    } else {
+        // Si el registro no fue exitoso, muestra un cuadro de diálogo de error
+        Alert dialog = new Alert(Alert.AlertType.ERROR);
+        dialog.setTitle("Error");
+        dialog.setHeaderText("No se ha podido inscribir");
+        dialog.setContentText("Algo ha ido mal, inténtalo de nuevo");
+        dialog.showAndWait();
+    }
+});
+
+}
+}
+
+
+</code>
+            </pre>
+        <h3>UserHomeController.java</h3>
+        <pre>
+<code>
+    package com.mangaplex.mangaplex.controller;
+
+import com.mangaplex.mangaplex.ResourceClass;
+import com.mangaplex.mangaplex.model.ImageChecker;
+import com.mangaplex.mangaplex.model.Manga;
+import com.mangaplex.mangaplex.model.User;
+import com.mangaplex.mangaplex.model.UserEmail;
+import javafx.application.Platform;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.List;
+import java.util.Optional;
+import java.util.ResourceBundle;
+
+public class UserHomeController implements Initializable {
+
+    @FXML
+    private BorderPane bp; // Panel principal
+
+    @FXML
+    private Button btnFavourites; // Botón de favoritos
+
+    @FXML
+    private Button btnGotoChapters; // Botón para ir a capítulos
+
+    @FXML
+    private Button btnAddToLibrary; // Botón para añadir a la biblioteca
+
+    @FXML
+    private Button btnHistory; // Botón de historial
+
+    @FXML
+    private Button btnLibrary; // Botón de biblioteca
+
+    @FXML
+    private Button btnLogout; // Botón de cerrar sesión
+
+    @FXML
+    private Button btnMangas; // Botón de mangas
+
+    @FXML
+    private ImageView imgThumbnail; // Vista de imagen para la miniatura
+
+    @FXML
+    private ListView<String> lsMangas; // Lista de mangas
+
+    @FXML
+    private ScrollPane scrollPane; // Panel de desplazamiento
+
+    @FXML
+    private TextField tfSearch; // Campo de búsqueda
+
+    @FXML
+    private Text txtArtist; // Texto del artista
+
+    @FXML
+    private Text txtAuthor; // Texto del autor
+
+    @FXML
+    private Text txtUserNickname; // Texto del apodo del usuario
+
+    @FXML
+    private Text txtDescription; // Texto de la descripción
+
+    @FXML
+    private VBox vbox; // Contenedor VBox
+
+    private UserEmail userEmail = UserEmail.getInstance(); // Instancia singleton del email del usuario
+    private User user; // Usuario actual
+
+    List<Manga> mangaList; // Lista de mangas
+
+    Manga currentManga; // Manga actual
+    private ObservableList<String> mangas = FXCollections.observableArrayList(); // Lista observable de mangas
+
+    public static int mangaID = 0; // ID del manga actual
+
+    public static SimpleBooleanProperty back = new SimpleBooleanProperty(false); // Propiedad booleana para el retroceso
+    private Stage stage; // Escenario
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        // Obtener todos los mangas desde la base de datos
+        mangaList = DBController.getAllMangas();
+
+        // Obtener el usuario actual desde la base de datos
+        user = DBController.getUserByEmail(userEmail.getEmail());
+
+        // Establecer el apodo del usuario en el texto correspondiente
+        txtUserNickname.setText(user.getNickname());
+
+        // Configurar la lista de mangas en la vista de lista
+        lsMangas.setItems(mangas);
+
+        int i = 1;
+        // Añadir mangas a la lista observable con su autor
+        for (Manga m : mangaList) {
+            mangas.add("Manga " + i + ": Author: " + m.getAuthor());
+            i++;
+        }
+
+        // Si hay mangas en la lista, seleccionar el primero
+        if (mangaList.size() > 0) {
+            lsMangas.getSelectionModel().selectFirst();
+            txtArtist.setText("Artist: " + mangaList.get(0).getArtist());
+            txtAuthor.setText("Author: " + mangaList.get(0).getAuthor());
+            txtDescription.setText("Description: " + mangaList.get(0).getDescription());
+
+            currentManga = getManga(mangaList.get(0).getAuthor());
+
+            String imagePath = mangaList.get(0).getThumbnail().toString();
+            File file = new File(imagePath);
+
+            if (file.exists() && ImageChecker.isImageFile(file.getPath())) {
+                Image image = new Image(file.toURI().toString());
+                imgThumbnail.setImage(image);
+            } else {
+                imgThumbnail.setImage(new Image(ResourceClass.class.getResourceAsStream("placeholder.png")));
+            }
+        } else {
+            // Si no hay mangas, desactivar botones y mostrar textos predeterminados
+            txtArtist.setText("Artist: N/A");
+            txtAuthor.setText("Author: N/A");
+            txtDescription.setText("Description: N/A");
+            imgThumbnail.setImage(new Image(ResourceClass.class.getResourceAsStream("placeholder.png")));
+            btnGotoChapters.setDisable(true);
+            btnAddToLibrary.setDisable(true);
+        }
+
+        // Añadir un listener para la selección de elementos en la lista de mangas
+        lsMangas.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.intValue() != -1) {
+                String selectedItem = lsMangas.getSelectionModel().getSelectedItem();
+                String[] author = selectedItem.split("Author: ");
+                currentManga = getManga(author[1]);
+
+                txtArtist.setText("Artist: " + currentManga.getArtist());
+                txtDescription.setText("Description: " + currentManga.getDescription());
+
+                String imagePath = currentManga.getThumbnail();
+                File file = new File(imagePath);
+
+                if (file.exists() && ImageChecker.isImageFile(file.getPath())) {
+                    Image image = new Image(file.toURI().toString());
+                    imgThumbnail.setImage(image);
+                } else {
+                    imgThumbnail.setImage(new Image(ResourceClass.class.getResourceAsStream("placeholder.png")));
+                }
+            }
+        });
+
+        // Acción para el campo de búsqueda
+        tfSearch.setOnAction(e -> {
+            if (!tfSearch.getText().isEmpty()) {
+                mangaList.clear();
+                mangas.clear();
+
+                // Buscar mangas en la base de datos según el texto de búsqueda
+                mangaList = DBController.searchManga(tfSearch.getText());
+
+                int c = 1;
+                for (Manga m : mangaList) {
+                    mangas.add("Manga " + c + ": Author: " + m.getAuthor());
+                    c++;
+                }
+
+                // Si se encuentran mangas, mostrar el primero
+                if (mangaList.size() > 0) {
+                    lsMangas.getSelectionModel().selectFirst();
+                    txtArtist.setText("Artista: " + mangaList.get(0).getArtist());
+                    txtAuthor.setText("Autor: " + mangaList.get(0).getAuthor());
+                    txtDescription.setText("Descripcion: " + mangaList.get(0).getDescription());
+
+                    currentManga = getManga(mangaList.get(0).getAuthor());
+
+                    String imagePath = mangaList.get(0).getThumbnail().toString();
+                    File file = new File(imagePath);
+
+                    if (file.exists() && ImageChecker.isImageFile(file.getPath())) {
+                        Image image = new Image(file.toURI().toString());
+                        imgThumbnail.setImage(image);
+                    } else {
+                        imgThumbnail.setImage(new Image(ResourceClass.class.getResourceAsStream("placeholder.png")));
+                    }
+                } else {
+                    // Si no se encuentran mangas, mostrar mensajes predeterminados y desactivar botones
+                    txtArtist.setText("Artista: N/A");
+                    txtAuthor.setText("Autor: N/A");
+                    txtDescription.setText("Descripcion: N/A");
+                    imgThumbnail.setImage(new Image(ResourceClass.class.getResourceAsStream("placeholder.png")));
+                    btnGotoChapters.setDisable(true);
+                    btnAddToLibrary.setDisable(true);
+
+                    Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+                    dialog.setTitle("Error");
+                    dialog.setHeaderText("0 Resultados Encontrados");
+                    dialog.setContentText("No matches found");
+                    dialog.showAndWait();
+                }
+            }
+        });
+
+        // Listener para el campo de búsqueda cuando el texto cambia
+        tfSearch.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.isEmpty()) {
+                mangaList.clear();
+                mangas.clear();
+
+                mangaList = DBController.getAllMangas();
+
+                int c = 1;
+                for (Manga m : mangaList) {
+                    mangas.add("Manga " + c + ": Autor: " + m.getAuthor());
+                    c++;
+                }
+
+                // Si se encuentran mangas, mostrar el primero
+                if (mangaList.size() > 0) {
+                    lsMangas.getSelectionModel().selectFirst();
+                    txtArtist.setText("Artista: " + mangaList.get(0).getArtist());
+                    txtAuthor.setText("Autor: " + mangaList.get(0).getAuthor());
+                    txtDescription.setText("Descripcion: " + mangaList.get(0).getDescription());
+
+                    currentManga = getManga(mangaList.get(0).getAuthor());
+
+                    String imagePath = mangaList.get(0).getThumbnail().toString();
+                    File file = new File(imagePath);
+
+                    if (file.exists() && ImageChecker.isImageFile(file.getPath())) {
+                        Image image = new Image(file.toURI().toString());
+                        imgThumbnail.setImage(image);
+                    } else {
+                        imgThumbnail.setImage(new Image(ResourceClass.class.getResourceAsStream("placeholder.png")));
+                    }
+                } else {
+                    // Si no se encuentran mangas, mostrar mensajes predeterminados y desactivar botones
+                    txtArtist.setText("Artista: N/A");
+                    txtAuthor.setText("Autor: N/A");
+                    txtDescription.setText("Descripcion: N/A");
+                    imgThumbnail.setImage(new Image(ResourceClass.class.getResourceAsStream("placeholder.png")));
+                    btnGotoChapters.setDisable(true);
+                    btnAddToLibrary.setDisable(true);
+                }
+            }
+        });
+
+        // Acción para el botón de ir a capítulos
+        btnGotoChapters.setOnAction(e -> {
+            if (DBController.getChapterCount(currentManga.getId()) < 1) {
+                Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+                dialog.setTitle("No hay contenido");
+                dialog.setHeaderText("No hay capitulos presentes");
+                dialog.setContentText("El manga no tiene capitulos añadidos a este");
+                dialog.showAndWait();
+            } else {
+                mangaID = currentManga.getId();
+                loadPage("user_chapter");
+            }
+        });
+
+        // Acción para el botón de cerrar sesión
+        btnLogout.setOnAction(e -> {
+            Platform.runLater(() -> {
+                stage = (Stage) btnLogout.getScene().getWindow();
+                Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+                dialog.setTitle("Cierre de sesión");
+                dialog.setHeaderText("Confirm cierre de sesion");
+                dialog.setContentText("Estas seguro de que quieres cerrar sesión?");
+                ButtonType yesButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
+                ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
+                dialog.getButtonTypes().setAll(yesButton, noButton);
+
+                Optional<ButtonType> result = dialog.showAndWait();
+                if (result.get() != yesButton) {
+                    e.consume();
+                } else {
+                    try {
+                        // Cargar el archivo auth.fxml
+                        Parent root = FXMLLoader.load(ResourceClass.class.getResource("auth.fxml"));
+                        stage.setTitle("MangaPlex");
+                        Scene scene = new Scene(root);
+                        scene.getStylesheets().add(ResourceClass.class.getResource("style.css").toExternalForm());
+                        stage.setScene(scene);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+        });
+
+        // Acción para el botón de historial
+        btnHistory.setOnAction(e -> {
+            loadPage("history");
+        });
+
+        // Acción para el botón de mangas
+        btnMangas.setOnAction(e -> {
+            bp.setCenter(scrollPane);
+        });
+
+        // Listener para la propiedad de retroceso
+        back.addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
+                if (t1) {
+                    bp.setCenter(scrollPane);
+                    back.set(false);
+                }
+            }
+        });
+    }
+
+    // Método para obtener un manga por su autor
+    private Manga getManga(String author) {
+        Manga manga = null;
+        for (Manga m : mangaList) {
+            if (m.getAuthor().equals(author)) {
+                manga = m;
+            }
+        }
+        return manga;
+    }
+
+    // Método para cargar una página específica
+    private void loadPage(String page) {
+        Parent root = null;
+        try {
+            root = FXMLLoader.load(ResourceClass.class.getResource(page + ".fxml"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        bp.setCenter(root);
+    }
+}
+</code>
+
+</pre>
+<h3>AdminChapterControler.java</h3>
+<pre>
+<code>
+    package com.mangaplex.mangaplex.controller;
+
+import com.mangaplex.mangaplex.model.Chapter;
+import com.mangaplex.mangaplex.model.Manga;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
+
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.ResourceBundle;
+
+public class AdminChaptersController implements Initializable {
+
+@FXML
+private Button btnAdd; // Botón para agregar un nuevo capítulo
+
+@FXML
+private Button btnDelete; // Botón para eliminar capítulo(s) seleccionado(s)
+
+@FXML
+private ProgressIndicator progressIn; // Indicador de progreso para tareas en segundo plano
+
+@FXML
+private TableView<Chapter> tableView; // TableView para mostrar capítulos
+
+@FXML
+private TableColumn<Chapter, String> tcChapter; // TableColumn para el nombre del capítulo
+
+@FXML
+private TableColumn<Chapter, Integer> tcNumber; // TableColumn para el número del capítulo
+
+@FXML
+private TableColumn<Chapter, String> tcPath; // TableColumn para la ruta del capítulo
+
+@FXML
+private TextField tfPath; // TextField para introducir la ruta del capítulo
+
+@FXML
+private TextField tfChapter; // TextField para introducir el nombre del capítulo
+
+@FXML
+private Text txt; // Elemento de texto para mostrar mensajes
+
+@FXML
+private VBox vbox; // VBox para organizar elementos verticalmente
+
+@FXML
+private ComboBox<String> cbxMangas; // ComboBox para seleccionar mangas
+
+@FXML
+private ComboBox<String> cbxMangasParent; // ComboBox para seleccionar el manga padre
+
+
+
+   private ObservableList<String> mangas = FXCollections.observableArrayList();
+// Lista observable para almacenar nombres de mangas
+
+private ObservableList<String> mangas1 = FXCollections.observableArrayList();
+// Otra lista observable para almacenar nombres de mangas
+
+private ObservableList<Chapter> chapters1 = FXCollections.observableArrayList();
+// Lista observable para almacenar objetos de tipo Chapter
+
+private ObservableList<String> chapters = FXCollections.observableArrayList();
+// Lista observable para almacenar nombres de capítulos
+
+List<Manga> mangaList;
+// Lista para almacenar objetos de tipo Manga
+
+List<Chapter> chapterList;
+// Lista para almacenar objetos de tipo Chapter
+
+int count;
+// Variable para contar elementos o para uso general
+
+@FXML
+void editDirectory(TableColumn.CellEditEvent<Chapter, String> e) {
+    // Método para manejar la edición de una celda en la tabla
+    TablePosition<Chapter, String> pos = e.getTablePosition();
+    // Obtiene la posición de la celda editada
+
+    String newVal = e.getNewValue();
+    // Obtiene el nuevo valor introducido en la celda
+
+    int row = pos.getRow();
+    // Obtiene la fila de la celda editada
+
+    int col = pos.getColumn();
+    // Obtiene la columna de la celda editada
+
+    Chapter c = e.getTableView().getItems().get(row);
+    // Obtiene el objeto Chapter en la fila editada
+
+    if(col == 1){
+        c.setName(newVal);
+        // Si la columna es 1, actualiza el nombre del capítulo
+    }else if(col == 2){
+        c.setPath(newVal);
+        // Si la columna es 2, actualiza la ruta del capítulo
+    }
+
+    int r = DBController.updateChapter(c);
+    // Llama a un método para actualizar la información del capítulo en la base de datos y guarda el resultado
+
+    if(r > 0){
+        // Si el resultado es positivo (se actualizó correctamente)
+        Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+        dialog.setTitle("Data Actulizada");
+        dialog.setHeaderText("La actualización de datos ha sido exitosa");
+        dialog.setContentText("El capítulo se ha subido con éxito");
+        dialog.showAndWait();
+        // Muestra un diálogo de información indicando que la actualización fue exitosa
+    }else{
+        // Si el resultado es negativo (no se actualizó)
+        Alert dialog = new Alert(Alert.AlertType.ERROR);
+        dialog.setTitle("Error");
+        dialog.setHeaderText("No se ha podido actualizar");
+        dialog.setContentText("Algo ha ido mal... Vuélvelo a intentar");
+        dialog.showAndWait();
+        // Muestra un diálogo de error indicando que hubo un problema
+    }
+
+    tableView.getSelectionModel().clearSelection();
+    // Limpia la selección actual en la tabla
+}
+
+
+    @Override
+public void initialize(URL url, ResourceBundle resourceBundle) {
+    // Método que inicializa la clase controladora.
+
+    mangaList = DBController.getAllMangas();
+    // Recupera todos los mangas de la base de datos y los almacena en una lista.
+
+    chapterList = new ArrayList<>();
+    // Inicializa una nueva lista para almacenar capítulos.
+
+    cbxMangas.setItems(mangas);
+    cbxMangasParent.setItems(mangas1);
+    // Establece los elementos de las listas observables en los ComboBox para seleccionar mangas.
+
+    tableView.setItems(chapters1);
+    // Establece los elementos de la lista observable de capítulos en la TableView.
+
+    tcChapter.setCellFactory(TextFieldTableCell.forTableColumn());
+    tcPath.setCellFactory(TextFieldTableCell.forTableColumn());
+    // Configura las celdas de las columnas para permitir la edición de texto directamente en la tabla.
+
+    tcNumber.setCellValueFactory(new PropertyValueFactory<>("number"));
+    tcChapter.setCellValueFactory(new PropertyValueFactory<>("name"));
+    tcPath.setCellValueFactory(new PropertyValueFactory<>("path"));
+    // Configura las fábricas de valores para las columnas, que indican qué atributos de los objetos Chapter deben mostrarse en cada columna.
+
+    int i = 1;
+    for(Manga m : mangaList){
+        mangas.add("Manga "+i+": Author: "+m.getAuthor());
+        mangas1.add("Manga "+i+": Author: "+m.getAuthor());
+        i++;
+    }
+    // Itera sobre la lista de mangas, agregando el nombre del manga y su autor a las listas observables.
+
+    btnAdd.setOnAction(e -> {
+        // Define la acción que se ejecutará cuando se pulse el botón de añadir.
+        txt.setText("Añadiendo data, por favor espera....");
+        // Muestra un mensaje de espera en un componente de texto.
+
+        if(tfChapter.getText().isEmpty() || tfPath.getText().isEmpty() || cbxMangas.getSelectionModel().getSelectedItem().isEmpty()){
+            // Verifica si algún campo necesario está vacío.
+            Alert dialog = new Alert(Alert.AlertType.ERROR);
+            dialog.setTitle("Error");
+            dialog.setHeaderText("Campo(s) vacio(s)");
+            dialog.setContentText("Uno o mas campos vacios");
+            dialog.showAndWait();
+            // Muestra una alerta de error si algún campo está vacío.
+            txt.setText("");
+            return;
+        }
+
+        String [] s = cbxMangas.getSelectionModel().getSelectedItem().split("Author: ");
+        // Divide el texto seleccionado para separar el nombre del autor.
+
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss z");
+        String currentDateAndTime = sdf.format(new Date());
+        // Formatea la fecha y hora actual.
+
+        int manga_id = DBController.getMangaIdByAuthor(s[1]);
+        // Obtiene el ID del manga por el autor.
+
+        int row = DBController.addChapter(manga_id, tfChapter.getText(), tfPath.getText(), currentDateAndTime);
+        // Añade un nuevo capítulo a la base de datos y almacena el número de filas afectadas.
+
+        if(row > 0){
+            // Verifica si la inserción fue exitosa.
+            if(cbxMangas.getSelectionModel().getSelectedItem().equals(cbxMangasParent.getSelectionModel().getSelectedItem())){
+                Chapter chapter = new Chapter(manga_id, tfChapter.getText(), tfPath.getText(), currentDateAndTime);
+                if(count == chapters1.size()){
+                    chapter.setNumber(count+1);
+                }else{
+                    chapter.setNumber(count);
+                }
+                chapters1.add(chapter);
+                // Añade el nuevo capítulo a la lista observable si se cumple la condición de selección.
+            }
+
+            Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+            dialog.setTitle("Data añadidos");
+            dialog.setHeaderText("Data añadidos efectivamente");
+            dialog.setContentText("El nuevo capítulo ha sido añadido con éxito");
+            dialog.showAndWait();
+            // Muestra una alerta informando que el capítulo ha sido añadido exitosamente.
+
+            txt.setText("");
+            // Limpia el texto de espera.
+        } else {
+            // Manejo de error si la inserción falla.
+            Alert dialog = new Alert(Alert.AlertType.ERROR);
+            dialog.setTitle("Error");
+            dialog.setHeaderText("No se ha podido añadir");
+            dialog.setContentText("Algo ha ido mal.... Vuélvelo a intentar");
+            dialog.showAndWait();
+
+            txt.setText("");
+        }
+    });
+
+    cbxMangasParent.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+        // Añade un listener que se activa cuando cambia el elemento seleccionado en el ComboBox de mangas parent.
+        if (newVal != null) {
+            // Verifica que el nuevo valor no sea nulo.
+            String selectedAuthor = newVal.toString();
+
+            String [] s = selectedAuthor.split("Author ");
+            // Extrae el nombre del autor del texto seleccionado.
+
+            chapterList.clear();
+            chapters1.clear();
+            // Limpia las listas de capítulos.
+
+            int manga_id = DBController.getMangaIdByAuthor(s[1]);
+            // Obtiene el ID del manga por el nombre del autor.
+
+            chapterList = DBController.getAllChapters(manga_id);
+            count = 1;
+            for(Chapter chapter: chapterList){
+                chapter.setNumber(count);
+                chapters1.add(chapter);
+                count++;
+            }
+            // Recupera todos los capítulos del manga seleccionado y los añade a la lista observable.
+        }
+    });
+
+    btnDelete.setOnAction(e -> {
+        // Establece la acción para el botón de eliminar.
+        Chapter selectedChapter = tableView.getSelectionModel().getSelectedItem();
+        // Obtiene el capítulo seleccionado en la tabla.
+
+        if (selectedChapter != null) {
+            // Verifica que se haya seleccionado un capítulo.
+            int row = DBController.deleteChapter(selectedChapter.getId());
+            // Elimina el capítulo seleccionado de la base de datos.
+
+            if (row > 0) {
+                // Verifica si la eliminación fue exitosa.
+                chapters1.remove(selectedChapter);
+                // Elimina el capítulo de la lista observable.
+
+                Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+                dialog.setTitle("Datos eliminados");
+                dialog.setHeaderText("Data eliminados con éxito");
+                dialog.setContentText("El capítulo ha sido eliminado con éxito");
+                dialog.showAndWait();
+                // Muestra una alerta informando que el capítulo fue eliminado exitosamente.
+            } else {
+                //// Manejo de error si la eliminación falla.
+                    Alert dialog = new Alert(Alert.AlertType.ERROR);
+                    dialog.setTitle("Error");
+                    dialog.setHeaderText("No se ha podido eliminar");
+                    dialog.setContentText("Algo ha ido mal... Vuelvelo a intentar");
+                    dialog.showAndWait();
+                }
+
+            } else {
+                Alert dialog = new Alert(Alert.AlertType.ERROR);
+                dialog.setTitle("Error");
+                dialog.setHeaderText("No se ha selecionado nada");
+                dialog.setContentText("Ningun dato ha sido selecionado de la tabla");
+                dialog.showAndWait();
+            }
+        });
+
+    }
+}
+</code>
+</pre>
+
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2024 MangaPlex. Todos los derechos reservados.</p>
+    </footer>
+</body>
+</html>
